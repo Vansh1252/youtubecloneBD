@@ -1,7 +1,17 @@
 const express = require('express');
 const { registeruser } = require('../controllers/user');
 const router = express.Router();
+const upload = require('../middlewares/multermiddlewares');
 
-router.route('/register').post(registeruser);
+router.post('/register', upload.fields([
+    {
+        name: "avatar",
+        maxCount: 1
+    },
+    {
+        name: "coverImage",
+        maxCount: 1
+    }
+]), registeruser);
 
 module.exports = router;
