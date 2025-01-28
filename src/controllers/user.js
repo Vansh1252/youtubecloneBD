@@ -157,4 +157,155 @@ const logoutuser = asyncHandler(async (req, res) => {
 });
 
 
-module.exports = { registeruser, loginuser, logoutuser }
+const refreshAccessToken = asyncHandler(async (req, res) => {
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
+
+    if (!incomingRefreshToken) {
+        return responseManger.Authorization(res, "unauthorized request...!");
+    }
+    try {
+        const decodedToken = jwt.verify(
+            incomingRefreshToken,
+            process.env.REFRESH_TOKEN_SECRET
+        )
+
+        const user = await usermodel.findById(decodedToken?._id)
+
+        if (!user) {
+            return responseManger.Authorization(res, "Invalid refresh token")
+        }
+
+        if (incomingRefreshToken !== user?.refreshToken) {
+            return responseManger.Authorization(res, "refresh token is expried or used...!");
+        }
+
+        const options = {
+            httpOnly: true,
+            secure: true
+        }
+
+        const { accessToken, newRefreshToken } = await genrateAccessandrefreshtoken(user._id)
+
+        return res
+            .status(200)
+            .cookie("accesstoken", accessToken, options)
+            .cookie("refreshtoken", newRefreshToken, options)
+            .json(
+                new ApiResponse(
+                    200,
+                    { accessToken, refreshToken: newRefreshToken },
+                    "Access token refreshed"
+                )
+            )
+    } catch (error) {
+        return responseManger.servererror(res, "Something went wrong...!");
+    }
+
+})
+
+const changecurrectpassword = asyncHandler(async (req, res) => {
+    const { oldpassword, newpassword } = req.body
+    try {
+
+        if (oldpassword != newpassword) {
+            const user = await usermodel.findById(user._id);
+            const isPasswordvalid = await user.isPasswordCorrect(oldpassword);
+            if (isPasswordvalid) {
+                user.password = newpassword;
+                await user.save();
+                return responseManger.onsuccess(res, {}, "password change successfully...!");
+            } else {
+                return responseManger.badrequest(res, "old password is Invalid...!");
+            }
+        } else {
+            return responseManger.badrequest(res, "oldpassword and newpassword is same...!");
+        }
+    } catch (error) {
+        return responseManger.servererror(res, "Something went wrong...!");
+    }
+});
+
+const getcurrentuser = asyncHandler(async (req, res) => {
+    try {
+        return responseManger.onsuccess(res, req.user._id, "user fetched successfully...!");
+    } catch (error) {
+        return responseManger.servererror(res, "Something went wrong...!");
+    }
+});
+
+const updateAccountdetails = asyncHandler(async (req, res) => {
+    const { fullName, username } = req.body
+    try {
+        if (fullName && fullName != null && fullName != undefined && typeof fullName === 'string' && fullName.trim() != '' || username && username != null && username != undefined && typeof username === 'string' && username.trim() != '') {
+            const user = await usermodel.findByIdAndUpdate(
+                req.user._id,
+                {
+                    $set: {
+                        fullName,
+                        username
+                    }
+                },
+                { new: true }
+            );
+            if (user != null) {
+                return responseManger.onsuccess(res, "user updated successfully...!");
+            } else {
+                return responseManger.badrequest(res, "user not found...!");
+            }
+        } else {
+            return responseManger.badrequest(res, "fullname or username is required...!");
+        }
+    } catch (error) {
+        return responseManger.servererror(res, "Something went wrong...!");
+    }
+});
+
+const avatarupdateuser = asyncHandler(async (req, res) => {
+    try {
+        const avatarlocalpath = req.files?.path;
+        if (avatarlocalpath != null) {
+            const avatar = await uploadOnCloudinary(avatarlocalpath)
+            if (avatar.url != null) {
+                const user = await usermodel.findByIdAndUpdate(req.user?._id, {
+                    $set: {
+                        avatar: avatar.url
+                    }
+                }, { new: true }).select('-password')
+                return responseManger.onsuccess(res, "avatar change successfully...!");
+            } else {
+                return responseManger.badrequest(res, "error while uploading on avatar...!");
+            }
+        } else {
+            return responseManger.badrequest(res, "Avatar file is missing...!");
+        }
+
+    } catch (error) {
+        return responseManger.servererror(res, "Something went wrong...!");
+    }
+});
+
+const coverImageupdateuser = asyncHandler(async (req, res) => {
+    try {
+        const coverImagelocalpath = req.files?.path;
+        if (coverImagelocalpath != null) {
+            const coverImage = await uploadOnCloudinary(coverImagelocalpath)
+            if (coverImage.url != null) {
+                const user = await usermodel.findByIdAndUpdate(req.user?._id, {
+                    $set: {
+                        coverImage: coverImage.url
+                    }
+                }, { new: true }).select('-password')
+                return responseManger.onsuccess(res, "coverImage change successfully...!");
+            } else {
+                return responseManger.badrequest(res, "error while uploading on coverImage...!");
+            }
+        } else {
+            return responseManger.badrequest(res, "coverImage file is missing...!");
+        }
+
+    } catch (error) {
+        return responseManger.servererror(res, "Something went wrong...!");
+    }
+});
+
+module.exports = { registeruser, loginuser, logoutuser, refreshAccessToken, changecurrectpassword, getcurrentuser, updateAccountdetails, avatarupdateuser, coverImageupdateuser }

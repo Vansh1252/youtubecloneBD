@@ -1,5 +1,5 @@
 const express = require('express');
-const { registeruser, loginuser, logoutuser } = require('../controllers/user');
+const { registeruser, loginuser, logoutuser, refreshAccessToken } = require('../controllers/user');
 const router = express.Router();
 const upload = require('../middlewares/multermiddlewares');
 const verifyjwt = require('../middlewares/authmiddlewares');
@@ -15,6 +15,7 @@ router.post('/register', upload.fields([
     }
 ]), registeruser);
 router.post('/loginIn', loginuser);
-router.post('/logout', verifyjwt, logoutuser)
+router.post('/logout', verifyjwt, logoutuser);
+router.post('/refresh-token', refreshAccessToken)
 
 module.exports = router;
