@@ -1,21 +1,19 @@
 // require('dotenv').config({ path: './env' })
-const dotenv = require('dotenv');
 const connectDB = require('./db/index.js');
 const app = require('./app.js');
+const dotenv = require('dotenv');
 
-dotenv.config({
-    path: './.env'
-})
+dotenv.config({ path: '.env' });
 
 connectDB()
-.then(()=>{
-    app.listen(process.env.PORT,()=>{
-        console.log(`server is running at port ${process.env.PORT}`);
+    .then(() => {
+        app.listen(process.env.PORT, () => {
+            console.log(`server is running at port ${process.env.PORT}`);
+        })
     })
-})
-.catch((err)=>{
-    console.log("mongoose connection failed...",err);
-})
+    .catch((err) => {
+        console.log("mongoose connection failed...", err);
+    })
 
 
 

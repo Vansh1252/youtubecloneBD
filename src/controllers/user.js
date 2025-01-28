@@ -13,13 +13,13 @@ const registeruser = asyncHandler(async (req, res) => {
                         const existinguser = await usermodel.findOne({
                             $or: [{ username }, { email }]
                         });
-                        if (existinguser != null) {
+                        if (existinguser === null) {
                             const avatarlocalpath = req.files?.avatar[0]?.path
                             const coverImagelocalpath = req.files?.coverImage[0]?.path
-                            if (avatarlocalpath != null) {
+                            if (avatarlocalpath) {
                                 const avatar = await uploadOnCloudinary(avatarlocalpath);
                                 const coverImage = await uploadOnCloudinary(coverImagelocalpath);
-                                if (avatar != null) {
+                                if (avatar) {
                                     const user = await usermodel.create({
                                         fullName,
                                         avatar: avatar.url,
@@ -28,7 +28,6 @@ const registeruser = asyncHandler(async (req, res) => {
                                         password,
                                         username: username.toLowerCase()
                                     });
-                                    user.save();
                                     const usercretaed = await usermodel.findById(user._id).select('-password -refreshToken');
                                     if (usercretaed) {
                                         return responseManger.created(res, usercretaed, "user created successfully...!");
@@ -36,7 +35,7 @@ const registeruser = asyncHandler(async (req, res) => {
                                         return responseManger.badrequest(res, "Something went wrong while registering the user...!");
                                     }
                                 } else {
-                                    return responseManger.badrequest(res, "Avatar file required...!");
+                                    return responseManger.badrequest(res, "Avatar files required...!");
                                 }
                             } else {
                                 return responseManger.badrequest(res, "Avatar file is required...!");
@@ -57,6 +56,7 @@ const registeruser = asyncHandler(async (req, res) => {
             return responseManger.badrequest(res, "full is required...!");
         }
     } catch (error) {
+        console.log(error);
         return responseManger.servererror(res, "something went wrong...!");
     }
 })
