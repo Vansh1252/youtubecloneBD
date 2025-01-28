@@ -16,6 +16,8 @@ const registeruser = asyncHandler(async (req, res) => {
                         if (existinguser === null) {
                             const avatarlocalpath = req.files?.avatar[0]?.path
                             const coverImagelocalpath = req.files?.coverImage[0]?.path
+                            console.log(coverImagelocalpath);
+                            console.log(avatarlocalpath);
                             if (avatarlocalpath) {
                                 const avatar = await uploadOnCloudinary(avatarlocalpath);
                                 const coverImage = await uploadOnCloudinary(coverImagelocalpath);
