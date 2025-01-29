@@ -19,11 +19,32 @@ const uploadOnCloudinary = async (localFilePath) => {
         })
         fs.unlinkSync(localFilePath)
         return response;
-
     } catch (error) {
         fs.unlinkSync(localFilePath)
         return null;
     }
 }
 
-module.exports = uploadOnCloudinary;
+const extractPublicId = (imageUrl) => {
+    try {
+        const parts = imageUrl.split("/");
+        const filename = parts.pop().split(".")[0]; // Extract filename without extension
+        return filename;
+    } catch (error) {
+        console.error("Error extracting public ID:", error);
+        return null;
+    }
+};
+
+
+
+const deleteFromCloudinary = async (publicId) => {
+    try {
+        await cloudinary.uploader.destroy(publicId);
+        console.log("Old avatar deleted successfully.");
+    } catch (error) {
+        console.error("Error deleting old avatar:", error);
+    }
+};
+
+module.exports = { uploadOnCloudinary, deleteFromCloudinary, extractPublicId };

@@ -1,7 +1,7 @@
 const asyncHandler = require('../utils/asyncHandler.js');
-const usermodel = require('../models/user.models.js');
+const usermodel = require('../models/users.model.js');
 const responseManger = require('../utils/responseManager.js');
-const uploadOnCloudinary = require('../utils/cloudinary.js');
+const { uploadOnCloudinary, deleteFromCloudinary, extractPublicId } = require('../utils/cloudinary.js');
 const ApiResponse = require('../utils/apiresponse.js');
 const mongoose = require('mongoose');
 
@@ -264,6 +264,17 @@ const avatarupdateuser = asyncHandler(async (req, res) => {
     try {
         const avatarlocalpath = req.files?.path;
         if (avatarlocalpath != null) {
+
+            const user = await usermodel.findById(req.user?._id);
+            if (!user) {
+                return responseManger.badrequest(res, "User not found...!");
+            }
+            if (user.avatar) {
+                const publicId = extractPublicId(user.avatar);
+                if (publicId) {
+                    await deleteFromCloudinary(publicId);
+                }
+            }
             const avatar = await uploadOnCloudinary(avatarlocalpath)
             if (avatar.url != null) {
                 const user = await usermodel.findByIdAndUpdate(req.user?._id, {
@@ -288,6 +299,16 @@ const coverImageupdateuser = asyncHandler(async (req, res) => {
     try {
         const coverImagelocalpath = req.files?.path;
         if (coverImagelocalpath != null) {
+            const user = await usermodel.findById(rq.user._id);
+            if (!user) {
+                return responseManger.Authorization(res, "user not found...!");
+            }
+            if (user.coverImage) {
+                const publicId = extractPublicId(user.coverImage);
+                if (publicId) {
+                    await deleteFromCloudinary(publicId);
+                }
+            }
             const coverImage = await uploadOnCloudinary(coverImagelocalpath)
             if (coverImage.url != null) {
                 const user = await usermodel.findByIdAndUpdate(req.user?._id, {
