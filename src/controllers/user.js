@@ -3,6 +3,7 @@ const usermodel = require('../models/user.models.js');
 const responseManger = require('../utils/responseManager.js');
 const uploadOnCloudinary = require('../utils/cloudinary.js');
 const ApiResponse = require('../utils/apiresponse.js');
+const mongoose = require('mongoose');
 
 const genrateAccessandrefreshtoken = async (userId) => {
     try {
@@ -16,7 +17,7 @@ const genrateAccessandrefreshtoken = async (userId) => {
     } catch (error) {
         return responseManger.servererror(res, "Something went wrong...!");
     }
-}
+};
 
 const registeruser = asyncHandler(async (req, res) => {
     const { fullName, email, username, password } = req.body;
@@ -78,7 +79,7 @@ const registeruser = asyncHandler(async (req, res) => {
         // console.log(error);
         return responseManger.servererror(res, "something went wrong...!");
     }
-})
+});
 
 const loginuser = asyncHandler(async (req, res) => {
     const { username, email, password } = req.body
@@ -156,7 +157,6 @@ const logoutuser = asyncHandler(async (req, res) => {
     }
 });
 
-
 const refreshAccessToken = asyncHandler(async (req, res) => {
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
 
@@ -201,7 +201,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         return responseManger.servererror(res, "Something went wrong...!");
     }
 
-})
+});
 
 const changecurrectpassword = asyncHandler(async (req, res) => {
     const { oldpassword, newpassword } = req.body
@@ -308,4 +308,129 @@ const coverImageupdateuser = asyncHandler(async (req, res) => {
     }
 });
 
-module.exports = { registeruser, loginuser, logoutuser, refreshAccessToken, changecurrectpassword, getcurrentuser, updateAccountdetails, avatarupdateuser, coverImageupdateuser }
+const channelprofileofuser = asyncHandler(async (req, res) => {
+    const { username } = req.params;
+    try {
+        if (username && username != null && username != undefined && typeof username === 'string' && username.trim() != '') {
+            const channel = await usermodel.aggregate([
+                {
+                    $match: {
+                        username: username
+                    },
+                }, {
+
+                    $lookup: {
+                        from: subscriptions,
+                        localField: "_id",
+                        foreignField: "channels",
+                        as: "subscribers"
+                    },
+                },
+                {
+                    $lookup: {
+                        from: subscriptions,
+                        localField: "_id",
+                        foreignField: "subscriber",
+                        as: "subscribedTo"
+                    }
+                },
+                {
+                    $addFields: {
+                        subscribersCount: {
+                            $size: "$subscribers"
+                        },
+                        channelsSubscribedToCount: {
+                            $size: "$subscribedTo"
+                        },
+                        isSubscribed: {
+                            $cond: {
+                                if: { $in: [req.user._id, "$subscribers.subscriber"] },
+                                then: true,
+                                else: false
+                            }
+                        }
+                    }
+                },
+                {
+                    $project: {
+                        fullName: 1,
+                        username: 1,
+                        subscribersCount: 1,
+                        channelsSubscribedToCount: 1,
+                        isSubscribed: 1,
+                        avatar: 1,
+                        coverImage: 1,
+                        email: 1
+                    }
+                }
+
+            ]);
+            if (channel != null && channel.length > 0) {
+                return responseManger.onsuccess(res, channel[0], "user channel fetched...!");
+            } else {
+                return responseManger.badrequest(res, "channel does not exist...!");
+            }
+        } else {
+            return responseManger.badrequest(res, "username is missing...!");
+        }
+    } catch (error) {
+        return responseManger.servererror(res, "Something went wrong...!");
+    }
+});
+
+const getwatchhistory = asyncHandler(async (req, res) => {
+    if (!mongoose.Types.ObjectId(req.user._id)) {
+        return responseManger.Authorization(res, "user is Invalid...!");
+    }
+    try {
+        const user = await usermodel.aggregate([
+            {
+                $match: {
+                    _id: new mongoose.Types.ObjectId(req.user._id)
+                }
+            },
+            {
+                $lookup: {
+                    from: "videos",
+                    localField: "watchHistory",
+                    foreignField: "_id",
+                    as: "watchHistory",
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: "users",
+                                localField: "owner",
+                                foreignField: "_id",
+                                as: "owner",
+                                pipeline: [
+                                    {
+                                        $project: {
+                                            fullName: 1,
+                                            username: 1,
+                                            avatar: 1
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            $addFields: {
+                                owner: {
+                                    $first: "$owner"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ]);
+        if (!user.length) {
+            return responseManger.badrequest(res, "No history of the user...!");
+        }
+        return responseManger.onsuccess(res, user[0].watchHistory, "watch history fetched...!");
+    } catch (error) {
+        return responseManger.servererror(res, "Something went wrong...!");
+    }
+});
+
+module.exports = { registeruser, loginuser, logoutuser, refreshAccessToken, changecurrectpassword, getcurrentuser, updateAccountdetails, avatarupdateuser, coverImageupdateuser, channelprofileofuser, getwatchhistory }
