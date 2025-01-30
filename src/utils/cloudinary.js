@@ -8,43 +8,71 @@ cloudinary.config({
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
-// console.log(process.env.CLOUDINARY_CLOUD_NAME, process.env.CLOUDINARY_API_KEY, process.env.CLOUDINARY_API_SECRET);
-
 
 const uploadOnCloudinary = async (localFilePath) => {
     try {
-        if (!localFilePath) return null
+        if (!localFilePath) {
+            console.error('No local file path provided');
+            return null;
+        }
+        if (!fs.existsSync(localFilePath)) {
+            throw new Error('File not found');
+        }
         const response = await cloudinary.uploader.upload(localFilePath, {
-            resource_type: "auto"
-        })
-        fs.unlinkSync(localFilePath)
+            resource_type: "auto",
+            use_filename: true,
+            unique_filename: false,
+            overwrite: true
+        });
+        fs.unlinkSync(localFilePath);
         return response;
     } catch (error) {
-        fs.unlinkSync(localFilePath)
+        if (localFilePath && fs.existsSync(localFilePath)) {
+            fs.unlinkSync(localFilePath);
+        }
+
+        console.error('Cloudinary upload error:', error.message);
         return null;
     }
-}
+};
 
-const extractPublicId = (imageUrl) => {
+const extractPublicId = (url) => {
+    if (!url) return null;
+
     try {
-        const parts = imageUrl.split("/");
-        const filename = parts.pop().split(".")[0]; // Extract filename without extension
-        return filename;
+        const publicIdMatch = url.match(/\/(?:v\d+\/)?([^\.]+)/);
+        return publicIdMatch ? publicIdMatch[1] : null;
     } catch (error) {
         console.error("Error extracting public ID:", error);
         return null;
     }
 };
 
-
-
-const deleteFromCloudinary = async (publicId) => {
+const deleteFromCloudinary = async (publicId, resourceType = 'image') => {
     try {
-        await cloudinary.uploader.destroy(publicId);
-        console.log("Old avatar deleted successfully.");
+        if (!publicId) {
+            console.error('No public ID provided');
+            return false;
+        }
+        const result = await cloudinary.uploader.destroy(publicId, {
+            resource_type: resourceType
+        });
+
+        if (result.result !== 'ok') {
+            throw new Error(`Cloudinary deletion failed: ${result.result}`);
+        }
+
+        console.log("Cloudinary file deleted successfully");
+        return true;
+
     } catch (error) {
-        console.error("Error deleting old avatar:", error);
+        console.error("Error deleting from Cloudinary:", error.message);
+        return false;
     }
 };
 
-module.exports = { uploadOnCloudinary, deleteFromCloudinary, extractPublicId };
+module.exports = {
+    uploadOnCloudinary,
+    deleteFromCloudinary,
+    extractPublicId
+};
