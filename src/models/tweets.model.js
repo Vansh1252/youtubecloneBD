@@ -11,11 +11,14 @@ const tweetschema = new mongoose.Schema({
         ref: "users",
         required: true
     },
-
+    deleted: {
+        type: Boolean,
+        default: false
+    }
 },
     { timestamps: true });
 
 
-const tweetmodel = mongoose.model("tweets", "tweetschema");
+const tweetmodel = mongoose.model("tweets", tweetschema);
 
 module.exports = tweetmodel;
