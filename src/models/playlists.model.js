@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-
 const playlistSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -21,6 +20,10 @@ const playlistSchema = new mongoose.Schema({
         ref: "users",
         required: true
     },
+    deleted: {
+        type: Boolean,
+        default: false
+    }
 }, { timestamps: true });
 
 const playlistmodel = mongoose.model("playlists", playlistSchema);

@@ -30,6 +30,12 @@ class responseManger {
     static servererror(res, message = "error in the server ", statuscode = 500,) {
         return res.status(statuscode).json({ success: false, message })
     }
+    static Notfound(res, message = "", statuscode = 404) {
+        return res.status(statuscode).json({
+            success: true,
+            message
+        })
+    }
 };
 
 module.exports = responseManger;

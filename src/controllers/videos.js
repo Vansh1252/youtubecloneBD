@@ -19,7 +19,6 @@ const getallvideos = asyncHandler(async (req, res) => {
             let currentpage = parseInt(limit);
             let sortOrder = sortType === "asc" ? 1 : -1;
             let sortQuery = { [sortBy]: sortOrder };
-
             if (search && search != null && search != undefined && typeof search === 'string' && search.trim() != '') {
                 query.$or = [
                     {
