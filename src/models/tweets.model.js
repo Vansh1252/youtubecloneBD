@@ -11,7 +11,7 @@ const tweetschema = new mongoose.Schema({
         ref: "users",
         required: true
     },
-    
+
 },
     { timestamps: true });
 

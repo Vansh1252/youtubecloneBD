@@ -6,13 +6,17 @@ const commentsschema = new mongoose.Schema({
         type: String,
         required: true
     },
-    video: {
+    videoId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "videos"
     },
     owner: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "users"
+    },
+    deleted: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true })
 

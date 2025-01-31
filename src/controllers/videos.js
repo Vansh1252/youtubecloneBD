@@ -39,7 +39,7 @@ const getallvideos = asyncHandler(async (req, res) => {
                     .sort(sortQuery)
                     .skip(currentpage - 1) * itemsperpage
                         .limit(itemsperpage)
-                        .select("")
+                        .select("videoFile thumbnail title duration views")
 
                 const totalvideo = await videomodel.countDocuments(search);
                 if (totalvideo.length > 0) {
@@ -175,12 +175,10 @@ const updateVideo = asyncHandler(async (req, res) => {
             if (video != null) {
                 const updates = {};
                 if (title && title != null && title != undefined && typeof title === 'string' && title.trim() != '') {
+                    updates.title = title;
                     if (description && description != null && description != undefined && typeof description === 'string' && description.trim() != '') {
-                        if (thumbnail && thumbnail != null && thumbnail != undefined && typeof thumbnail === 'string' && thumbnail.trim() != '') {
+                        updates.description = description;
 
-                        } else {
-                            return responseManger.badrequest(res, "thumbnail is required...!");
-                        }
                     } else {
                         return responseManger.badrequest(res, "description is required...!");
                     }

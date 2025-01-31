@@ -1,11 +1,7 @@
 const asyncHandler = require('../utils/asyncHandler.js');
-const subscription = require('../models/subscriptions.model.js');
-const usermodel = require('../models/users.model.js');
 const responseManger = require('../utils/responseManager.js');
-const { uploadOnCloudinary, deleteFromCloudinary, extractPublicId } = require('../utils/cloudinary.js');
 const mongoose = require('mongoose');
 const subscriptionmodel = require('../models/subscriptions.model.js');
-
 
 
 const toggleSubscription = asyncHandler(async (req, res) => {
@@ -54,7 +50,6 @@ const toggleSubscription = asyncHandler(async (req, res) => {
     }
 });
 
-
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
     const { channelId } = req.params;
     try {
@@ -82,7 +77,6 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
         return responseManger.servererror(res, "Something went wrong...!");
     }
 });
-
 
 const getSubscribedChannels = asyncHandler(async (req, res) => {
     const { subscriberId } = req.params
