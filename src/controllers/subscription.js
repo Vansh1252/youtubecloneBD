@@ -17,7 +17,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
                     subscriberId: userId,
                     channelId: channelId
                 });
-                let isSubscribed = false;
+                let isSubscribed;
                 if (existingSubscription) {
                     await subscriptionmodel.findByIdAndUpdate(existingSubscription._id, { deleted: true });
                     isSubscribed = false;
@@ -28,7 +28,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
                         deleted: true
                     })
                     if (deletedsub) {
-                        await subscriptionmodel.findByIdAndUpdate(deletedSub._id, { deleted: false });
+                        await subscriptionmodel.findByIdAndUpdate(deletedsub._id, { deleted: false });
                     } else {
                         await subscriptionmodel.create({
                             subscriberId: userId,
