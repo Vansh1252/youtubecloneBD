@@ -2,6 +2,7 @@ const asyncHandler = require('../utils/asyncHandler.js');
 const responseManger = require('../utils/responseManager.js');
 const mongoose = require('mongoose');
 const playlistmodel = require('../models/playlists.model.js');
+const videosmodel = require('../models/videos.model.js');
 
 const createPlaylist = asyncHandler(async (req, res) => {
     const { playlistId, name, description } = req.body
@@ -144,7 +145,62 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
         if (userId && mongoose.Types.ObjectId.isValid(userId)) {
             if (playlistId && mongoose.Types.ObjectId.isValid(playlistId)) {
                 if (videoId && mongoose.Types.ObjectId.isValid(videoId)) {
-                    
+                    const playlist = await playlistmodel.findOne({ _id: playlistId, owner: userId })
+                    if (playlist != null) {
+                        const video = await videosmodel.findById(videoId);
+                        if (video != null) {
+                            const isvideoinplaylist = playlist.videos.some(vid => vid.equals(videoId));
+                            if (isvideoinplaylist === null) {
+                                playlist.videos.push(videoId);
+                                await playlist.save();
+                                return responseManger.onsuccess(res, playlist, "video added successfully...!");
+                            } else {
+                                return responseManger.badrequest(res, "video is alreay in the playlist...!");
+                            }
+                        } else {
+                            return responseManger.Notfound(res, "video not found...!")
+                        }
+                    } else {
+                        return responseManger.Notfound(res, "no playlist found...!");
+                    }
+                } else {
+                    return responseManger.badrequest(res, "videoId is Invalid...!");
+                }
+            } else {
+                return responseManger.badrequest(res, "playlistId is Invalid...!");
+            }
+        } else {
+            return responseManger.Authorization(res, "userId is Invalid...!");
+        }
+    } catch (error) {
+        return responseManger.servererror(res, "Something went wrong...!");
+    }
+});
+
+const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
+    const { playlistId, videoId } = req.params
+    try {
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+            if (playlistId && mongoose.Types.ObjectId.isValid(playlistId)) {
+                if (videoId && mongoose.Types.ObjectId.isValid(videoId)) {
+                    const playlist = await playlistmodel.findOne({ _id: playlistId, owner: userId })
+                    if (playlist != null) {
+                        const intitallength = playlist.videos.length;
+                        const updatedplaylist = await playlistmodel.findByIdAndUpdate(
+                            playlistId,
+                            { $pull: { videos: videoId } },
+                            { new: true }
+                        );
+                        if (updatedplaylist !== intitallength) {
+                            return responseManger.onsuccess(res, updatedplaylist, "video remove successfully...!");
+                        } else {
+                            return responseManger.Notfound(res, "video not found in the playlist...!");
+                        }
+                    } else {
+                        return responseManger.badrequest(res, "no playlist found...!");
+                    }
+                } else {
+                    return responseManger.badrequest(res, "videoId is Invalid...!")
                 }
             } else {
                 return responseManger.badrequest(res, "playlistId is Invalid...!");
@@ -157,15 +213,27 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
     }
 })
 
-const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
-    const { playlistId, videoId } = req.params
-    // TODO: remove video from playlist
-
-})
-
 const deletePlaylist = asyncHandler(async (req, res) => {
     const { playlistId } = req.params
-    // TODO: delete playlist
+    const userId = req.user._id;
+    try {
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+            if (playlistId && mongoose.Types.ObjectId.isValid(playlistId)) {
+                const deletePlaylist = await playlistmodel.findByIdAndUpdate(playlistId, { deleted: true }, { new: true });
+                if (deletePlaylist != null) {
+                    return responseManger.onsuccess(res, "playlist deleted successfully...!");
+                } else {
+                    return responseManger.Notfound(res, "playlist not found...!");
+                }
+            } else {
+                return responseManger.badrequest(res, "playlistId is Invalid...!");
+            }
+        } else {
+            return responseManger.Authorization(res, "userId is Invalid...!");
+        }
+    } catch (error) {
+        return responseManger.servererror(res, "Something went wrong...!");
+    }
 })
 
 
