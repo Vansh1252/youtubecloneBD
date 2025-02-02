@@ -76,7 +76,6 @@ const registeruser = asyncHandler(async (req, res) => {
             return responseManger.badrequest(res, "full is required...!");
         }
     } catch (error) {
-        // console.log(error);
         return responseManger.servererror(res, "something went wrong...!");
     }
 });

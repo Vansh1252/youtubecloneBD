@@ -6,6 +6,6 @@ const { deletecomment, getvideocomment, save } = require('../controllers/comment
 
 router.post('/save', verifyjwt, save);
 router.get('/', verifyjwt, getvideocomment);
-router.get('/delete', verifyjwt, deletecomment);
+router.post('/delete', verifyjwt, deletecomment);
 
 module.exports = router;

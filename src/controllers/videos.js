@@ -57,47 +57,38 @@ const getallvideos = asyncHandler(async (req, res) => {
     }
 });
 
+
 const publishAVideo = asyncHandler(async (req, res) => {
-    const { thumbnail, title, description } = req.body
+    const { title, description } = req.body;
     try {
         if (req.user._id && mongoose.Types.ObjectId.isValid(req.user._id)) {
-            if (title && title != null && title != undefined && typeof title === 'string' && title.trim() != '') {
-                if (description && description != null && description != undefined && typeof description === 'string' && description.trim() != '') {
-                    if (thumbnail && thumbnail != null && thumbnail != undefined && typeof thumbnail === 'string' && thumbnail.trim() != '') {
-                        if (!req.files || !req.files.videofile?.[0] || !req.files.thumbnail?.[0]) {
-                            return responseManger.badrequest(res, "files is required...!");
-                        }
-                        const videofilelocalpath = req.files?.videofile[0]?.path;
-                        const thumbnailFile = req.files.thumbnail[0];
-                        const getVideoDuration = (filePath) => new Promise((resolve) => {
-                            ffmpeg.ffprobe(filePath, (err, metadata) => {
-                                resolve(err ? 0 : Math.floor(metadata.format.duration || 0));
-                            });
-                        });
-
-                        const [videoUpload, thumbnailUpload, duration] = await Promise.all([
-                            uploadOnCloudinary(videofilelocalpath.path),
-                            uploadOnCloudinary(thumbnailFile.path),
-                            getVideoDuration(videofilelocalpath.path)
-                        ]);
-                        if (videofiles) {
-                            const video = new videomodel({
-                                videofile: videoUpload.url,
-                                thumbnail: thumbnailUpload.url,
-                                title: title.trim(),
-                                description,
-                                duration: duration,
-                                owner: req.user._id
-                            });
-                            await video.save();
-
-                            return responseManger.onsuccess(res, "video published successfully...!");
-                        } else {
-                            return responseManger.badrequest(res, "videofiles is required...!")
-                        }
-                    } else {
-                        return responseManger.badrequest(res, "thumbnail is required...!");
+            if (title && title.trim() !== '') {
+                if (description && description.trim() !== '') {
+                    if (!req.files || !req.files.videofile?.[0] || !req.files.thumbnail?.[0]) {
+                        return responseManger.badrequest(res, "files are required...!");
                     }
+                    const videofilelocalpath = req.files.videofile[0].path;
+                    const thumbnailFile = req.files.thumbnail[0].path;
+                    const [videoUpload, thumbnailUpload] = await Promise.all([
+                        uploadOnCloudinary(videofilelocalpath),
+                        uploadOnCloudinary(thumbnailFile),
+                    ]);
+                    if (!videoUpload?.url) {
+                        return responseManger.badrequest(res, "Error uploading video file...!");
+                    }
+                    if (!thumbnailUpload?.url) {
+                        return responseManger.badrequest(res, "Error uploading thumbnail file...!");
+                    }
+                    const video = new videomodel({
+                        videofile: videoUpload.url,
+                        thumbnail: thumbnailUpload.url,
+                        title: title.trim(),
+                        description,
+                        duration: videoUpload.duration,
+                        owner: req.user._id
+                    });
+                    await video.save();
+                    return responseManger.onsuccess(res, "video published successfully...!");
                 } else {
                     return responseManger.badrequest(res, "description is required...!");
                 }
@@ -105,10 +96,10 @@ const publishAVideo = asyncHandler(async (req, res) => {
                 return responseManger.badrequest(res, "title is required...!");
             }
         } else {
-            return responseManger.Authorization(res, "Invalid userId...!");
+            return responseManger.badrequest(res, "Invalid user ID...!");
         }
     } catch (error) {
-        return responseManger.servererror(res, "Something went wrong...!");
+        return responseManger.badrequest(res, "Error processing video...!");
     }
 });
 
@@ -247,3 +238,73 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
 
 
 module.exports = { getallvideos, publishAVideo, getVideoById, updateVideo, deleteVideo, togglePublishStatus }
+
+
+
+
+
+
+
+
+
+// const publishAVideos = asyncHandler(async (req, res) => {
+//     const { title, description } = req.body;
+//     try {
+//         if (req.user._id && mongoose.Types.ObjectId.isValid(req.user._id)) {
+//             if (title && title.trim() !== '') {
+//                 if (description && description.trim() !== '') {
+//                     if (!req.files || !req.files.videofile?.[0] || !req.files.thumbnail?.[0]) {
+//                         return responseManger.badrequest(res, "files are required...!");
+//                     }
+//                     const videofilelocalpath = req.files.videofile[0].path;
+//                     const thumbnailFile = req.files.thumbnail[0].path;
+
+//                     console.log("Video File Path:", videofilelocalpath);
+//                     console.log("Thumbnail File Path:", thumbnailFile);
+//                     const getVideoDuration = (filePath) => new Promise((resolve) => {
+//                         ffmpeg.ffprobe(filePath, (err, metadata) => {
+//                             resolve(err ? 0 : Math.floor(metadata.format.duration || 0));
+//                         });
+//                     });
+
+//                     const [videoUpload, thumbnailUpload, duration] = await Promise.all([
+//                         uploadOnCloudinary(videofilelocalpath),
+//                         uploadOnCloudinary(thumbnailFile),
+//                         getVideoDuration(videofilelocalpath)
+//                     ]);
+
+//                     console.log("Video Upload Response:", videoUpload);
+//                     console.log("Thumbnail Upload Response:", thumbnailUpload);
+//                     console.log("Extracted Duration:", duration);
+
+//                     if (!videoUpload?.url) {
+//                         return responseManger.badrequest(res, "Error uploading video file...!");
+//                     }
+//                     if (!thumbnailUpload?.url) {
+//                         return responseManger.badrequest(res, "Error uploading thumbnail file...!");
+//                     }
+
+//                     const video = new videomodel({
+//                         videofile: videoUpload.url,
+//                         thumbnail: thumbnailUpload.url,
+//                         title: title.trim(),
+//                         description,
+//                         duration: duration,
+//                         owner: req.user._id
+//                     });
+//                     await video.save();
+//                     return responseManger.onsuccess(res, "video published successfully...!");
+//                 } else {
+//                     return responseManger.badrequest(res, "description is required...!");
+//                 }
+//             } else {
+//                 return responseManger.badrequest(res, "title is required...!");
+//             }
+//         } else {
+//             return responseManger.badrequest(res, "Invalid user ID...!");
+//         }
+//     } catch (error) {
+//         console.error('Error processing video:', error);
+//         return responseManger.badrequest(res, "Error processing video...!");
+//     }
+// });

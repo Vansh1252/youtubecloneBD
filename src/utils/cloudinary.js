@@ -1,7 +1,8 @@
 const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
+const ffmpeg = require('fluent-ffmpeg');
+const ffmpegStatic = require("ffmpeg-static");
 require('dotenv').config();
-
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -27,11 +28,10 @@ const uploadOnCloudinary = async (localFilePath) => {
         fs.unlinkSync(localFilePath);
         return response;
     } catch (error) {
+        console.error('Error uploading to Cloudinary:', error);
         if (localFilePath && fs.existsSync(localFilePath)) {
             fs.unlinkSync(localFilePath);
         }
-
-        console.error('Cloudinary upload error:', error.message);
         return null;
     }
 };
@@ -70,9 +70,8 @@ const deleteFromCloudinary = async (publicId, resourceType = 'image') => {
         return false;
     }
 };
-
 module.exports = {
     uploadOnCloudinary,
     deleteFromCloudinary,
-    extractPublicId
+    extractPublicId,
 };
