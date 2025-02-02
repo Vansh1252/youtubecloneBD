@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getPlaylistById, createPlaylist, deletePlaylist, getPlaylistById, getUserPlaylists, removeVideoFromPlaylist } = require('../controllers/playlist');
+const { getPlaylistById, createPlaylist, deletePlaylist, getUserPlaylists, removeVideoFromPlaylist } = require('../controllers/playlist');
 const uploads = require('../middlewares/videomultermiddlewares');
 const verifyjwt = require('../middlewares/authmiddlewares');
 
