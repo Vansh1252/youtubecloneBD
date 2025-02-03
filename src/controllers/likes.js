@@ -35,82 +35,65 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
             return responseManger.Authorization(res, "Invalid userId...!");
         }
     } catch (error) {
-        console.log(error);
         return responseManger.servererror(res, "Something went worng...!");
     }
 });
 
 const toggleCommentLike = asyncHandler(async (req, res) => {
-    const { commentId } = req.params
+    const { commentId } = req.body;
     const userId = req.user._id;
     try {
         if (userId && mongoose.Types.ObjectId.isValid(userId)) {
-            if (videoId && mongoose.Types.ObjectId.isValid(commentId)) {
+            if (commentId && mongoose.Types.ObjectId.isValid(commentId)) {
                 const existingcommentlikes = await likesmodel.findOne({
-                    comment: videoId,
+                    comment: commentId,
                     likedBy: userId
                 });
                 let islike;
-                if (existingcommentlikes != null) {
-                    await likesmodel.findByIdAndUpdate(existingcommentlikes._id, { deleted: true });
+                if (existingcommentlikes) {
+                    await likesmodel.findByIdAndDelete(existingcommentlikes._id);
                     islike = false;
                 } else {
-                    const deletecommentlike = await likesmodel.findOne({
-                        comment: videoId,
-                        likedBy: userId,
-                        deleted: true
+                    await likesmodel.create({
+                        comment: commentId,
+                        likedBy: userId
                     });
-                    if (deletecommentlike != null) {
-                        await likesmodel.findByIdAndUpdate(deletecommentlike._id, { deleted: false });
-                    } else {
-                        await likesmodel.create({
-                            comment: videoId,
-                            likedBy: userId
-                        });
-                        islike = true
-                    }
+                    islike = true
                 }
                 return responseManger.onsuccess(res, islike, "likes status updated...!");
             } else {
                 return responseManger.badrequest(res, "commentId is Invalid...!");
             }
-        } else {
+        }
+        else {
             return responseManger.Authorization(res, "Invalid userId...!");
         }
     } catch (error) {
+        console.log(error);
         return responseManger.servererror(res, "Something went worng...!");
     }
 });
 
 const toggleTweetLike = asyncHandler(async (req, res) => {
-    const { tweetId } = req.params
+    const { tweetId } = req.body;
     const userId = req.user._id;
     try {
         if (userId && mongoose.Types.ObjectId.isValid(userId)) {
-            if (videoId && mongoose.Types.ObjectId.isValid(tweetId)) {
+            if (tweetId && mongoose.Types.ObjectId.isValid(tweetId)) {
                 const existingtweetlike = await likesmodel.findOne({
-                    video: videoId,
+                    tweet: tweetId,
                     likedBy: userId
                 });
                 let islike;
                 if (existingtweetlike != null) {
-                    await likesmodel.findByIdAndUpdate(existingtweetlike._id, { deleted: true });
+                    await likesmodel.findByIdAndDelete(existingtweetlike._id);
                     islike = false;
                 } else {
-                    const deletetweetlike = await likesmodel.findOne({
-                        video: videoId,
-                        likedBy: userId,
-                        deleted: true
+                    await likesmodel.create({
+                        tweet: tweetId,
+                        likedBy: userId
                     });
-                    if (deletetweetlike != null) {
-                        await likesmodel.findByIdAndUpdate(deletetweetlike._id, { deleted: false });
-                    } else {
-                        await likesmodel.create({
-                            video: videoId,
-                            likedBy: userId
-                        });
-                        islike = true
-                    }
+                    islike = true
                 }
                 return responseManger.onsuccess(res, islike, "likes status updated...!");
             } else {
