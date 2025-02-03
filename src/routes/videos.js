@@ -18,7 +18,10 @@ router.post('/save', verifyjwt, upload.fields([
 ]), publishAVideo);
 router.post('/delete', verifyjwt, deleteVideo);
 router.get('/publish', verifyjwt, togglePublishStatus);
-router.put('/update', verifyjwt, updateVideo);
+router.put('/update', verifyjwt, upload.single({
+    name: "thumbnail",
+    maxCount: 1
+}), updateVideo);
 router.get('/details', verifyjwt, getVideoById);
 
 

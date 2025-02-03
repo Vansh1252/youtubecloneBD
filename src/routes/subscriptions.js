@@ -4,9 +4,9 @@ const { getSubscribedChannels, getUserChannelSubscribers, toggleSubscription } =
 const verifyjwt = require('../middlewares/authmiddlewares');
 
 
-router.get('/c/:channelId', verifyjwt, getSubscribedChannels);
-router.get('/u/:subscriberId', verifyjwt, getUserChannelSubscribers);
-router.post('/c/:channelId', verifyjwt, toggleSubscription);
+router.post('/channel', verifyjwt, getSubscribedChannels);
+router.get('/usersubscriber', verifyjwt, getUserChannelSubscribers);
+router.post('/toggle', verifyjwt, toggleSubscription);
 
 
 

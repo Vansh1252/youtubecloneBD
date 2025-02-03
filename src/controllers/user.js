@@ -329,84 +329,91 @@ const coverImageupdateuser = asyncHandler(async (req, res) => {
 });
 
 const channelprofileofuser = asyncHandler(async (req, res) => {
-    const { username } = req.params;
+    const { username } = req.body;
+    const userId = req.user._id;
     try {
-        if (username && username != null && username != undefined && typeof username === 'string' && username.trim() != '') {
-            const channel = await usermodel.aggregate([
-                {
-                    $match: {
-                        username: username
-                    },
-                }, {
-
-                    $lookup: {
-                        from: subscriptions,
-                        localField: "_id",
-                        foreignField: "channels",
-                        as: "subscribers"
-                    },
-                },
-                {
-                    $lookup: {
-                        from: subscriptions,
-                        localField: "_id",
-                        foreignField: "subscriber",
-                        as: "subscribedTo"
-                    }
-                },
-                {
-                    $addFields: {
-                        subscribersCount: {
-                            $size: "$subscribers"
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+            if (username && username != null && username != undefined && typeof username === 'string' && username.trim() != '') {
+                const channel = await usermodel.aggregate([
+                    {
+                        $match: {
+                            username: username
                         },
-                        channelsSubscribedToCount: {
-                            $size: "$subscribedTo"
+                    },
+                    {
+                        $lookup: {
+                            from: "subscriptions",
+                            localField: "_id",
+                            foreignField: "channelId",
+                            as: "subscribers"
                         },
-                        isSubscribed: {
-                            $cond: {
-                                if: { $in: [req.user._id, "$subscribers.subscriber"] },
-                                then: true,
-                                else: false
+                    },
+                    {
+                        $lookup: {
+                            from: "subscriptions",
+                            localField: "_id",
+                            foreignField: "subscriberId",
+                            as: "subscribedTo"
+                        }
+                    },
+                    {
+                        $addFields: {
+                            subscribersCount: {
+                                $size: "$subscribers"
+                            },
+                            channelsSubscribedToCount: {
+                                $size: "$subscribedTo"
+                            },
+                            isSubscribed: {
+                                $cond: {
+                                    if: { $in: [userId, "$subscribers.subscriber"] },
+                                    then: true,
+                                    else: false
+                                }
                             }
                         }
+                    },
+                    {
+                        $project: {
+                            fullName: 1,
+                            username: 1,
+                            subscribersCount: 1,
+                            channelsSubscribedToCount: 1,
+                            isSubscribed: 1,
+                            avatar: 1,
+                            coverImage: 1,
+                            email: 1
+                        }
                     }
-                },
-                {
-                    $project: {
-                        fullName: 1,
-                        username: 1,
-                        subscribersCount: 1,
-                        channelsSubscribedToCount: 1,
-                        isSubscribed: 1,
-                        avatar: 1,
-                        coverImage: 1,
-                        email: 1
-                    }
-                }
 
-            ]);
-            if (channel != null && channel.length > 0) {
-                return responseManger.onsuccess(res, channel[0], "user channel fetched...!");
+                ]);
+                if (channel != null && channel.length > 0) {
+                    return responseManger.onsuccess(res, channel[0], "user channel fetched...!");
+                } else {
+                    return responseManger.badrequest(res, "channel does not exist...!");
+                }
             } else {
-                return responseManger.badrequest(res, "channel does not exist...!");
+                return responseManger.badrequest(res, "username is missing...!");
             }
         } else {
-            return responseManger.badrequest(res, "username is missing...!");
+            return responseManger.Authorization(res, "userId is Invalid...!");
         }
     } catch (error) {
+        console.log(error);
         return responseManger.servererror(res, "Something went wrong...!");
     }
 });
 
 const getwatchhistory = asyncHandler(async (req, res) => {
-    if (!mongoose.Types.ObjectId(req.user._id)) {
+    const userId = req.user._id;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
         return responseManger.Authorization(res, "user is Invalid...!");
     }
     try {
         const user = await usermodel.aggregate([
             {
                 $match: {
-                    _id: new mongoose.Types.ObjectId(req.user._id)
+                    _id: new mongoose.Types.ObjectId(userId)
                 }
             },
             {

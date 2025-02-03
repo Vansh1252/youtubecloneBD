@@ -1,13 +1,10 @@
 const asyncHandler = require('../utils/asyncHandler.js');
 const videomodel = require('../models/videos.model.js');
-const ffmpeg = require("fluent-ffmpeg");
-const ffmpegStatic = require("ffmpeg-static");
 const usermodel = require('../models/users.model.js');
 const responseManger = require('../utils/responseManager.js');
 const { uploadOnCloudinary, deleteFromCloudinary, extractPublicId } = require('../utils/cloudinary.js');
 const mongoose = require('mongoose');
 
-ffmpeg.setFfmpegPath(ffmpegStatic);
 
 
 const getallvideos = asyncHandler(async (req, res) => {
@@ -54,7 +51,6 @@ const getallvideos = asyncHandler(async (req, res) => {
         return responseManger.servererror(res, "Something went wrong...!");
     }
 });
-
 
 const publishAVideo = asyncHandler(async (req, res) => {
     const { title, description } = req.body;
@@ -103,20 +99,22 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.body;
+    const userId = req.user._id;
     try {
-        if (req.user._id && mongoose.Types.ObjectId.isValid(req.user._id)) {
-            const user = await usermodel.findById(req.user._id)
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+            const user = await usermodel.findById(userId)
             if (user === null) {
                 return responseManger.Authorization(res, "user not found...!");
             }
             if (videoId && mongoose.Types.ObjectId.isValid(videoId)) {
-                const video = await videomodel.findById(videoId).populate({ path: 'owner', select: 'username avatar subscribersCount' });
+                const video = await videomodel.findById(videoId).populate({ path: 'owner', select: 'username avatar subscribersCount watchHistory' });
                 if (video != null) {
-                    if (video.isPublished != null && video.owner._id.equals(req.user._id)) {
-                        if (!video.owner._id.equals(req.user._id)) {
+                    if (video.isPublished || video.owner._id.equals(userId)) {
+                        if (!video.owner._id.equals(userId)) {
                             await videomodel.findByIdAndUpdate(videoId, { $inc: { views: 1 } });
                             video.views += 1;
                         }
+                        await usermodel.findByIdAndUpdate(userId, { $addToSet: { watchHistory: videoId } });
                         const responseData = {
                             _id: video._id,
                             title: video.title,
@@ -131,7 +129,7 @@ const getVideoById = asyncHandler(async (req, res) => {
                                 _id: video.owner._id,
                                 username: video.owner.username,
                                 avatar: video.owner.avatar,
-                                subscribersCount: video.owner.subscribersCount
+                                subscribersCount: video.owner.subscribersCount,
                             }
                         };
                         return responseManger.onsuccess(res, responseData, "video statred...!");
@@ -148,14 +146,14 @@ const getVideoById = asyncHandler(async (req, res) => {
             return responseManger.Authorization(res, "Invalid userId...!");
         }
     } catch (error) {
+        console.log('Error getting video by id:', error);
         return responseManger.servererror(res, "Something went wrong...!");
     }
 });
 
-
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId, title, description, } = req.body;
-    console.log(req.body);
+    const thumbnailfile = req.files?.thumbnail?.[0];
     try {
         if (videoId && mongoose.Types.ObjectId.isValid(videoId)) {
             const video = await videomodel.findOne({ _id: videoId, owner: req.user._id });
@@ -185,12 +183,13 @@ const updateVideo = asyncHandler(async (req, res) => {
                     return responseManger.badrequest(res, "title is required...!");
                 }
             } else {
-                return responseManger.notfound(res, "Video not found or unauthorized");
+                return responseManger.Notfound(res, "Video not found or unauthorized");
             }
         } else {
             return responseManger.badrequest(res, "Invalid videoId...!")
         }
     } catch (error) {
+        console.log('Error updating video:', error);
         return responseManger.servererror(res, "Something went wrong...!");
     }
 });
@@ -243,72 +242,3 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
 
 module.exports = { getallvideos, publishAVideo, getVideoById, updateVideo, deleteVideo, togglePublishStatus }
 
-
-
-
-
-
-
-
-
-// const publishAVideos = asyncHandler(async (req, res) => {
-//     const { title, description } = req.body;
-//     try {
-//         if (req.user._id && mongoose.Types.ObjectId.isValid(req.user._id)) {
-//             if (title && title.trim() !== '') {
-//                 if (description && description.trim() !== '') {
-//                     if (!req.files || !req.files.videofile?.[0] || !req.files.thumbnail?.[0]) {
-//                         return responseManger.badrequest(res, "files are required...!");
-//                     }
-//                     const videofilelocalpath = req.files.videofile[0].path;
-//                     const thumbnailFile = req.files.thumbnail[0].path;
-
-//                     console.log("Video File Path:", videofilelocalpath);
-//                     console.log("Thumbnail File Path:", thumbnailFile);
-//                     const getVideoDuration = (filePath) => new Promise((resolve) => {
-//                         ffmpeg.ffprobe(filePath, (err, metadata) => {
-//                             resolve(err ? 0 : Math.floor(metadata.format.duration || 0));
-//                         });
-//                     });
-
-//                     const [videoUpload, thumbnailUpload, duration] = await Promise.all([
-//                         uploadOnCloudinary(videofilelocalpath),
-//                         uploadOnCloudinary(thumbnailFile),
-//                         getVideoDuration(videofilelocalpath)
-//                     ]);
-
-//                     console.log("Video Upload Response:", videoUpload);
-//                     console.log("Thumbnail Upload Response:", thumbnailUpload);
-//                     console.log("Extracted Duration:", duration);
-
-//                     if (!videoUpload?.url) {
-//                         return responseManger.badrequest(res, "Error uploading video file...!");
-//                     }
-//                     if (!thumbnailUpload?.url) {
-//                         return responseManger.badrequest(res, "Error uploading thumbnail file...!");
-//                     }
-
-//                     const video = new videomodel({
-//                         videofile: videoUpload.url,
-//                         thumbnail: thumbnailUpload.url,
-//                         title: title.trim(),
-//                         description,
-//                         duration: duration,
-//                         owner: req.user._id
-//                     });
-//                     await video.save();
-//                     return responseManger.onsuccess(res, "video published successfully...!");
-//                 } else {
-//                     return responseManger.badrequest(res, "description is required...!");
-//                 }
-//             } else {
-//                 return responseManger.badrequest(res, "title is required...!");
-//             }
-//         } else {
-//             return responseManger.badrequest(res, "Invalid user ID...!");
-//         }
-//     } catch (error) {
-//         console.error('Error processing video:', error);
-//         return responseManger.badrequest(res, "Error processing video...!");
-//     }
-// });

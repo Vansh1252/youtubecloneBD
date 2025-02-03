@@ -22,7 +22,7 @@ router.post('/changepassword', verifyjwt, changecurrectpassword);
 router.patch('/updatecoverImage', verifyjwt, upload.single("coverImage"), coverImageupdateuser);
 router.get('/getcurrentuser', verifyjwt, getcurrentuser);
 router.patch('/updateaccount', verifyjwt, updateAccountdetails);
-router.get('/c/:username', verifyjwt, channelprofileofuser);
+router.get('/profile', verifyjwt, channelprofileofuser);
 router.get('/history', verifyjwt, getwatchhistory);
 
 
