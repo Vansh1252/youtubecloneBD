@@ -12,7 +12,13 @@ const getChannelStats = asyncHandler(async (req, res) => {
         const userId = req.user._id;
         if (userId && mongoose.Types.ObjectId.isValid(userId)) {
             const videoStats = await videosmodel.aggregate([
-                { $match: { owner: userId, deleted: false } },
+                {
+                    $match:
+                    {
+                        owner: new mongoose.Types.ObjectId(userId),
+                        deleted: false
+                    }
+                },
                 {
                     $group: {
                         _id: null,
@@ -21,28 +27,52 @@ const getChannelStats = asyncHandler(async (req, res) => {
                     }
                 }
             ]);
-
-            const totalview = videoStats.length > 0 ? videoStats[0].totalViews : 0;
-            const totalvideo = videoStats.length > 0 ? videoStats[0].totalVideos : 0;
             const totalSubscribers = await subscriptionmodel.countDocuments({
                 channelId: userId,
                 deleted: false
             });
-            const videoIds = await videosmodel.distinct("_id", { owner: userId });
-            const totalLikes = await likesmodel.countDocuments({
-                video: { $in: videoIds },
-                deleted: false
-            });
-            return responseManger.onsuccess(res, "Channel statistics retrieved successfully!", {
+            const likeStats = await videosmodel.aggregate([
+                {
+                    $match:
+                    {
+                        owner: new mongoose.Types.ObjectId(userId),
+                        deleted: false
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "likes",
+                        localField: "_id",
+                        foreignField: "video",
+                        as: "likes"
+                    }
+                },
+                {
+                    $project: {
+                        totalLikes: { $size: "$likes" }
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        totalLikes: { $sum: "$totalLikes" }
+                    }
+                }
+            ]);
+            const totalview = videoStats.length > 0 ? videoStats[0].totalViews : 0;
+            const totalvideo = videoStats.length > 0 ? videoStats[0].totalVideos : 0;
+            const totalLikes = likeStats.length > 0 ? likeStats[0].totalLikes : 0;
+            return responseManger.onsuccess(res, {
                 totalview,
                 totalvideo,
                 totalSubscribers,
                 totalLikes
-            });
+            }, "Channel statistics retrieved successfully!");
         } else {
             return responseManger.Authorization(res, "userId is Invaild...!");
         }
     } catch (error) {
+        console.log(error);
         return responseManger.servererror(res, "Something went wrong...!");
     }
 });

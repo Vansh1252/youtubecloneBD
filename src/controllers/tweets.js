@@ -18,7 +18,7 @@ const save = asyncHandler(async (req, res) => {
                         return responseManger.badrequest(res, "tweet not found for update...!");
                     }
                 } else {
-                    const createtweet = await tweetsmodel.create({
+                    const createtweet = await tweetmodel.create({
                         content: content.trim(),
                         owner: userId
                     });
@@ -31,6 +31,7 @@ const save = asyncHandler(async (req, res) => {
             return responseManger.Authorization(res, "userId is Invalid...!");
         }
     } catch (error) {
+        console.log(error);
         return responseManger.servererror(res, "Something went worng...!");
     }
 });
