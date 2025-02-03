@@ -1,7 +1,5 @@
 const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
-const ffmpeg = require('fluent-ffmpeg');
-const ffmpegStatic = require("ffmpeg-static");
 require('dotenv').config();
 
 cloudinary.config({
