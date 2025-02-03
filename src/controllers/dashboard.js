@@ -83,6 +83,7 @@ const getChannelVideos = asyncHandler(async (req, res) => {
         if (userId && mongoose.Types.ObjectId.isValid(userId)) {
             const obj1 = {
                 owner: userId,
+                isPublished: true,
                 deleted: false
             };
             const totalvideos = await videosmodel.find(obj1).populate("owner", "username avatar coverImage ").select("thumbnail title description duration views owner").lean().sort({ createdAt: -1 });
