@@ -11,8 +11,9 @@ ffmpeg.setFfmpegPath(ffmpegStatic);
 
 
 const getallvideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, search, sortBy, sortType, userId } = req.query;
+    const { page, limit, search, sortBy, sortType } = req.body;
     try {
+        const userId = req.user._id;
         if (userId && mongoose.Types.ObjectId.isValid(userId)) {
             let query = { isPublished: true };
             let itemsperpage = parseInt(page);
@@ -34,25 +35,22 @@ const getallvideos = asyncHandler(async (req, res) => {
                         }
                     }
                 ]
-                const video = await videomodel.find(search)
-                    .sort(sortQuery)
-                    .skip(currentpage - 1) * itemsperpage
-                        .limit(itemsperpage)
-                        .select("videoFile thumbnail title duration views")
-
-                const totalvideo = await videomodel.countDocuments(search);
-                if (totalvideo.length > 0) {
-                    return responseManger.onsuccess(res, { video, totalvideo, totalpages: Math.ceil(totalvideo / itemsperpage), currentpage: currentpage, itemsperpage }, "videos fetched successfulyy...!");
-                } else {
-                    return responseManger.badrequest(res, "no video found...!");
-                }
-            } else {
-                return responseManger.badrequest(res, "no search found...!");
             }
+            const video = await videomodel.find(query)
+                .sort(sortQuery)
+                .skip((currentpage - 1) * itemsperpage)
+                .limit(itemsperpage)
+                .select("videoFile thumbnail title duration views")
+                .populate({ path: 'owner', select: 'username avatar subscribersCount' })
+                .lean();
+
+            const totalvideo = await videomodel.countDocuments(query);
+            return responseManger.onsuccess(res, { video, totalvideo, totalpages: Math.ceil(totalvideo / itemsperpage), currentpage: currentpage, itemsperpage }, "videos fetched successfulyy...!");
         } else {
             return responseManger.badrequest(res, "userId is Invalid...!");
         }
     } catch (error) {
+        console.log('Error fetching videos:', error);
         return responseManger.servererror(res, "Something went wrong...!");
     }
 });
@@ -104,7 +102,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
 });
 
 const getVideoById = asyncHandler(async (req, res) => {
-    const { videoId } = req.params;
+    const { videoId } = req.body;
     try {
         if (req.user._id && mongoose.Types.ObjectId.isValid(req.user._id)) {
             const user = await usermodel.findById(req.user._id)
@@ -156,9 +154,8 @@ const getVideoById = asyncHandler(async (req, res) => {
 
 
 const updateVideo = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
-    const { title, description, } = req.body;
-    const thumbnailfile = req.file;
+    const { videoId, title, description, } = req.body;
+    console.log(req.body);
     try {
         if (videoId && mongoose.Types.ObjectId.isValid(videoId)) {
             const video = await videomodel.findOne({ _id: videoId, owner: req.user._id });
@@ -168,6 +165,18 @@ const updateVideo = asyncHandler(async (req, res) => {
                     updates.title = title;
                     if (description && description != null && description != undefined && typeof description === 'string' && description.trim() != '') {
                         updates.description = description;
+                        if (thumbnailfile) {
+                            const thumbnailUpload = await uploadOnCloudinary(thumbnailfile.path);
+                            if (thumbnailUpload.url) {
+                                const thumbnailpublicId = extractPublicId(video.thumbnail);
+                                await deleteFromCloudinary(thumbnailpublicId);
+                                updates.thumbnail = thumbnailUpload.url;
+                            } else {
+                                return responseManger.badrequest(res, "Error uploading thumbnail file...!");
+                            }
+                        }
+                        await videomodel.findByIdAndUpdate(videoId, updates);
+                        return responseManger.onsuccess(res, null, "Video updated successfully");
 
                     } else {
                         return responseManger.badrequest(res, "description is required...!");
@@ -187,7 +196,7 @@ const updateVideo = asyncHandler(async (req, res) => {
 });
 
 const deleteVideo = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
+    const { videoId } = req.body;
     try {
         if (videoId && mongoose.Types.ObjectId.isValid(videoId)) {
             const video = await videomodel.findByIdAndUpdate({
@@ -195,12 +204,6 @@ const deleteVideo = asyncHandler(async (req, res) => {
                 owner: req.user._id
             }, { deleted: true });
             if (video != null) {
-                const videopulicId = extractPublicId(video.videofile);
-                const thumbnailpublicId = extractPublicId(video.thumbnail);
-                await Promise.all([
-                    deleteFromCloudinary(videopulicId),
-                    deleteFromCloudinary(thumbnailpublicId)
-                ]);
                 return responseManger.success(res, null, "Video deleted successfully");
             } else {
                 return responseManger.badrequest(res, "Video not found or unauthorized")
@@ -209,12 +212,13 @@ const deleteVideo = asyncHandler(async (req, res) => {
             return responseManger.servererror(res, "Something went wrong...!");
         }
     } catch (error) {
+        console.log('Error deleting video:', error);
         return responseManger.servererror(res, "Something went wrong...!");
     }
 });
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
+    const { videoId } = req.body
     try {
         if (videoId && mongoose.Types.ObjectId.isValid(videoId)) {
             const video = await videomodel.findOne({

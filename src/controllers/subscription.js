@@ -5,7 +5,7 @@ const subscriptionmodel = require('../models/subscriptions.model.js');
 
 
 const toggleSubscription = asyncHandler(async (req, res) => {
-    const { channelId } = req.params
+    const { channelId } = req.body;
     try {
         if (req.user._id && mongoose.Types.ObjectId.isValid(req.user._id)) {
             if (userId.toString() === channelId.toString()) {
