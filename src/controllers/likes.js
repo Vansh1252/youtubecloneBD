@@ -6,36 +6,28 @@ const likesmodel = require('../models/likes.model.js');
 
 
 const toggleVideoLike = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
+    const { videoId } = req.body;
     const userId = req.user._id;
     try {
         if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+            let islike = false;
             if (videoId && mongoose.Types.ObjectId.isValid(videoId)) {
                 const existingvideolike = await likesmodel.findOne({
                     video: videoId,
                     likedBy: userId
                 });
-                let islike;
-                if (existingvideolike != null) {
-                    await likesmodel.findByIdAndUpdate(existingvideolike._id, { deleted: true });
+                if (existingvideolike) {
+                    await likesmodel.findByIdAndDelete(existingvideolike._id, { likedBy: userId }, { new: true });
                     islike = false;
-                } else {
-                    const deletevideolike = await likesmodel.findOne({
-                        video: videoId,
-                        likedBy: userId,
-                        deleted: true
-                    });
-                    if (deletevideolike != null) {
-                        await likesmodel.findByIdAndUpdate(deletevideolike._id, { deleted: false });
-                    } else {
-                        await likesmodel.create({
-                            video: videoId,
-                            likedBy: userId
-                        });
-                        islike = true
-                    }
                 }
-                return responseManger.onsuccess(res, islike, "likes status updated...!");
+                else {
+                    await likesmodel.create({
+                        video: videoId,
+                        likedBy: userId
+                    });
+                    islike = true
+                }
+                return responseManger.onsuccess(res, { isLiked: islike }, "likes status updated...!");
             } else {
                 return responseManger.badrequest(res, "videoId is Invalid...!");
             }
@@ -43,6 +35,7 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
             return responseManger.Authorization(res, "Invalid userId...!");
         }
     } catch (error) {
+        console.log(error);
         return responseManger.servererror(res, "Something went worng...!");
     }
 });

@@ -43,7 +43,7 @@ const createPlaylist = asyncHandler(async (req, res) => {
 });
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
-    const { userId } = req.params;
+    const userId = req.user._id;
     try {
         if (userId && mongoose.Types.ObjectId.isValid(userId)) {
             const playlist = await playlistmodel.find({
@@ -67,10 +67,10 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
     } catch (error) {
         return responseManger.servererror(res, "Something went wrong...!");
     }
-})
+});
 
 const getPlaylistById = asyncHandler(async (req, res) => {
-    const { playlistId } = req.params
+    const { playlistId } = req.body
     const userId = req.user._id;
     try {
         if (userId && mongoose.Types.ObjectId.isValid(userId)) {
@@ -78,8 +78,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                 const videos = await playlistmodel.aggregate([
                     {
                         $match: {
-                            _id: playlistId,
-                            owner: mongoose.Types.ObjectId(userId)
+                            _id: new mongoose.Types.ObjectId(playlistId),
                         }
                     },
                     {
@@ -90,21 +89,21 @@ const getPlaylistById = asyncHandler(async (req, res) => {
                             as: "videodetails"
                         }
                     },
-                    { $unwind: "videodetails" },
+                    { $unwind: "$videodetails" },
                     {
                         $lookup: {
                             from: "users",
-                            localField: "videodetails.owner",
+                            localField: "owner",
                             foreignField: "_id",
                             as: "uploaderDetails"
                         }
                     },
-                    { $unwind: "uploaderDetails" },
+                    { $unwind: "$uploaderDetails" },
                     {
                         $project: {
-                            _id,
-                            name,
-                            description,
+                            _id: 1,
+                            name: 1,
+                            description: 1,
                             video: {
                                 _id: "$videodetails._id",
                                 title: "$videodetails.title",
@@ -139,7 +138,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
 });
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
-    const { playlistId, videoId } = req.params
+    const { playlistId, videoId } = req.body
     const userId = req.user._id;
     try {
         if (userId && mongoose.Types.ObjectId.isValid(userId)) {
@@ -147,10 +146,13 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
                 if (videoId && mongoose.Types.ObjectId.isValid(videoId)) {
                     const playlist = await playlistmodel.findOne({ _id: playlistId, owner: userId })
                     if (playlist != null) {
-                        const video = await videosmodel.findById(videoId);
+                        const video = await videosmodel.findById({ _id: videoId, owner: userId });
+                        if (video.owner.equals(userId)) {
+                            return responseManger.badrequest(res, "video not found...!");
+                        }
                         if (video != null) {
                             const isvideoinplaylist = playlist.videos.some(vid => vid.equals(videoId));
-                            if (isvideoinplaylist === null) {
+                            if (isvideoinplaylist !== null) {
                                 playlist.videos.push(videoId);
                                 await playlist.save();
                                 return responseManger.onsuccess(res, playlist, "video added successfully...!");
@@ -173,12 +175,14 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
             return responseManger.Authorization(res, "userId is Invalid...!");
         }
     } catch (error) {
+        console.log(error);
         return responseManger.servererror(res, "Something went wrong...!");
     }
 });
 
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
-    const { playlistId, videoId } = req.params
+    const { playlistId, videoId } = req.body;
+    const userId = req.user._id;
     try {
         if (userId && mongoose.Types.ObjectId.isValid(userId)) {
             if (playlistId && mongoose.Types.ObjectId.isValid(playlistId)) {
@@ -209,12 +213,13 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
             return responseManger.Authorization(res, "userId is Invalid...!");
         }
     } catch (error) {
+        console.log(error);
         return responseManger.servererror(res, "Something went wrong...!");
     }
-})
+});
 
 const deletePlaylist = asyncHandler(async (req, res) => {
-    const { playlistId } = req.params
+    const { playlistId } = req.body;
     const userId = req.user._id;
     try {
         if (userId && mongoose.Types.ObjectId.isValid(userId)) {
@@ -234,9 +239,6 @@ const deletePlaylist = asyncHandler(async (req, res) => {
     } catch (error) {
         return responseManger.servererror(res, "Something went wrong...!");
     }
-})
-
-
-
+});
 
 module.exports = { createPlaylist, getUserPlaylists, getPlaylistById, addVideoToPlaylist, removeVideoFromPlaylist, deletePlaylist }

@@ -5,16 +5,23 @@ const commentmodel = require('../models/comments.model.js');
 
 
 const getvideocomment = asyncHandler(async (req, res) => {
-    const { videoId } = req.params;
+    const { videoId } = req.body;
     const { page = 1, limit = 10 } = req.body;
     try {
         if (videoId && mongoose.Types.ObjectId.isValid(videoId)) {
-            let itemsperpage = parseInt(page);
-            let currentpage = parseInt(limit);
-            const comment = await commentmodel.find({ videoId }).populate("owner", "username").skip(currentpage - 1) * itemsperpage.limit(itemsperpage).sort({ createdAt: -1 }).select("-deleted -videoId -updatedAt -_v").lean();
+            let currentPage = Math.max(parseInt(page) || 1, 1);
+            let itemsPerPage = Math.max(parseInt(limit) || 10, 1);;
+            const comment = await commentmodel
+                .find({ videoId: videoId, deleted: false })
+                .populate("owner", "username")
+                .skip((currentPage - 1) * itemsPerPage)
+                .limit(itemsPerPage)
+                .sort({ createdAt: -1 })
+                .select("-deleted -videoId -updatedAt -_v")
+                .lean();
             const totalcomment = await commentmodel.countDocuments({ videoId });
             if (comment.length > 0) {
-                return responseManger.onsuccess(res, { totalcomment, comment, totalpages: Math.ceil(totalcomment / itemsperpage), currentpage: currentpage, itemsperpage }, "comment on the video...!");
+                return responseManger.onsuccess(res, { totalcomment, comment, totalpages: Math.ceil(totalcomment / itemsPerPage), currentPage: currentPage, itemsPerPage }, "comment on the video...!");
             } else {
                 return responseManger.onsuccess(res, "No comment found...!");
             }
@@ -22,12 +29,13 @@ const getvideocomment = asyncHandler(async (req, res) => {
             return responseManger.badrequest(res, "Invalid videoId...!");
         }
     } catch (error) {
+        console.log(error);
         return responseManger.servererror(res, "Something went wrong...!");
     }
 });
 
 const save = asyncHandler(async (req, res) => {
-    const { videoId } = req.params;
+    const { videoId } = req.body;
     const { commentId, content } = req.body;
     try {
         const userId = req.user._id;
