@@ -112,14 +112,12 @@ const loginuser = asyncHandler(async (req, res) => {
                     return responseManger.Authorization(res, "password is Incorrect...!");
                 }
             } else {
-                console.log("1");
                 return responseManger.badrequest(res, "user not found...!");
             }
         } else {
             return responseManger.badrequest(res, "username or email is required...! ");
         }
     } catch (error) {
-        console.log(error);
         return responseManger.servererror(res, "Something went wrong...!");
     }
 });
@@ -151,7 +149,6 @@ const logoutuser = asyncHandler(async (req, res) => {
             .json(new ApiResponse(200, {}, "User loggedOut successfully...!"));
 
     } catch (error) {
-        console.log(error);
         return responseManger.servererror(res, "Something went wrong...!");
     }
 });
